@@ -28,7 +28,7 @@ class JREStatus:
             JRELines = [line.get_text().strip() for line in s]
 
             # Add to available lines
-            self._JREQAvail[region] = JRELines.copy()
+            self._JREQAvail[region] = JRELines
 
             # Find all info corresponding to each line
             s = soup.find_all('div', class_='rosen_infoBox')
