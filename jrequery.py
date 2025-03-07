@@ -1,8 +1,6 @@
 import requests
 from bs4 import BeautifulSoup
 from colorama import Fore, Back, Style
-from enum import Enum
-from dataclasses import dataclass
 
 RegionList = ["kanto", "shinetsu", "tohoku", "chyokyori", "shinkansen"]
 

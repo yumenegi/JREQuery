@@ -2,7 +2,6 @@ import requests
 from bs4 import BeautifulSoup
 from colorama import Fore, Back, Style
 import datetime
-from jrequery import JREQuery, JRERegion
 
 url = "https://ekitan.com/timetable/railway/line-station/151-0/d1?view=list"
 eki = requests.get(url, headers={'User-Agent': 'Mozilla/5.0'})
@@ -32,7 +31,3 @@ for i, it in enumerate(euy):
 
 for i in euy[i:i+8]:
     print(" | ".join(i))
-
-jreq = JREQuery.JREQuery(JRERegion.SHINETSU, debug=False)
-if jreq["只見線"] != "平常運転":
-    print(Fore.RED+jreq["只見線"]+Fore.WHITE)
