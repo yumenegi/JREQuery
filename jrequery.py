@@ -8,12 +8,13 @@ RegionList = ["kanto", "shinetsu", "tohoku", "chyokyori", "shinkansen"]
 
 
 class JREStatus:
-    _JREQResults = {}
-    _JREQAvail = {}
     
     def __init__(self, debug=False):
         # Make request to query all JR East operational regions to get info
         # of all regions
+        self._JREQResults = {}
+        self._JREQAvail = {}
+        
         for region in RegionList:
             r = requests.get(
                 "https://traininfo.jreast.co.jp/train_info/%s.aspx" % region, 
@@ -73,3 +74,7 @@ class JRETimetable:
     # TODO: Query Ekitan for timetable given line and station
     def get(line, station):
         pass
+
+if __name__ == "__main__":
+    jre = JREStatus()
+    print(jre.get_stats("山手線", "kanto"))
