@@ -3,6 +3,7 @@ from bs4 import BeautifulSoup
 from colorama import Fore, Back, Style
 import datetime
 import json
+import numpy as np
 
 
 # url = "https://ekitan.com/timetable/railway/line-station/151-0/d1?view=list"
@@ -47,17 +48,27 @@ class Ekitan:
     def __init__(self, line:str):
         """Make request to Ekitan and set up information needed to query the information
         of a train line"""
+        # TODO: Create cache to reduce access time
         # Init variables
+
+        ### Name of the trainline
         self._train = line
-        self._time_tb = {}
+        
+        ### All timetable links
+        self._ttb_link = {}
+        
+        ### Cached timetable for multiple accesses
+        self._ttb_cache = {}
 
         # First we need to parse the JSON file that encodes the url of train lines
         # Open File
         with open('ekitan_tt.json') as f:
-            line_ids = json.load(f)
+            self._line_ids = json.load(f)
+        
+        assert line in self._line_ids.keys()
 
         # Find the specific ID
-        line_id = line_ids[line]
+        line_id = self._line_ids[line]
 
         self._link = EKITAN_URL + "/timetable/railway/line/%s" % line_id
 
@@ -70,21 +81,21 @@ class Ekitan:
         for t in tt:
             station = t.find("a", {"ga-event-lbl": "GA-TRAC_railway-line_PC_station"}).text
             hrefs = t.find_all("a", {"ga-event-lbl": "GA-TRAC_railway-line_PC_direction"}, href=True)
-            self._time_tb[station] = [EKITAN_URL + a["href"] + "?view=list" for a in hrefs]
+            self._ttb_link[station] = [EKITAN_URL + a["href"] + "?view=list" for a in hrefs]
+            self._ttb_cache[station] = [None for link in self._ttb_link[station]] 
 
     def get_all_stations(self):
-        return self._time_tb.keys()
-
-    def get_timetable_by_id(self, station_id:int, direction:int):
-        # TODO: Implement find by ID
-        # Issue: Ekitan Station number does not match JR Station Number
-        # Broken up lines that turn into other lines - e.g. Tokyo-Ueno Line
-        pass
+        return self._ttb_link.keys()
     
     def get_timetable_by_name(self, station:str, direction:int):
-        timetable_link = self._time_tb[station][direction-1]
+        # Check if we can use cached data
+        if station in self._ttb_cache.keys() and self._ttb_cache[station][direction-1]:
+            return self._ttb_cache[station][direction-1]
 
-        r = requests.get(timetable_link, headers={'User-Agent': 'Mozilla/5.0'})
+
+        ttb_link = self._ttb_link[station][direction-1]
+
+        r = requests.get(ttb_link, headers={'User-Agent': 'Mozilla/5.0'})
         soup = BeautifulSoup(r.content, "html.parser")
 
         active = soup.find("div", class_="active")
@@ -96,10 +107,25 @@ class Ekitan:
         # Remove Empty String
         for i, y in enumerate(timetable):
             timetable[i] = list(filter(None, map(str.strip, y)))
+        self._ttb_cache[station][direction-1] = timetable
         return timetable
+    
+    def get_next_trains(self, station:str, direction:int, num = 3):
+        timetable = self.get_timetable_by_name(station, direction)
+        t = datetime.datetime.now(datetime.timezone.utc)
+        t += datetime.timedelta(hours=9)
+
+        for i, it in enumerate(timetable):
+            train_t = it[0].split(':')
+            # print(train_t)
+            if (int(train_t[0]) >= t.hour and int(train_t[1]) >= t.minute):
+                break
+        return timetable[i:i+num]
+    
+    def is_station_avail(self, station:str):
+        return station in self._ttb_link.keys()
 
 
 if __name__ == "__main__":
     eki = Ekitan("中央線")
-    print(eki.get_all_stations())
-    print(eki.get_timetable_by_name("東京駅", 1))
+    print(eki.get_next_trains("東京駅", 1))
